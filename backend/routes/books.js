@@ -32,19 +32,14 @@ router.get("/:id", async (req, res) => {
 // Add a book
 router.post("/", auth, async (req, res) => {
   try {
-    const { title, author, subject, edition, branch, condition, mrp, price, description, image } = req.body;
+    const {
+      title, author, subject, edition, branch,
+      condition, genre, mrp, price, description, image
+    } = req.body;
 
     const book = new Book({
-      title,
-      author,
-      subject,
-      edition,
-      branch,
-      condition,
-      mrp,
-      price,
-      description,
-      image,
+      title, author, subject, edition, branch,
+      condition, genre, mrp, price, description, image,
       seller: req.user.id,
     });
 
@@ -62,12 +57,9 @@ router.put("/:id", auth, async (req, res) => {
     if (!book) {
       return res.status(404).json({ message: "Book not found" });
     }
-
-    // Check if user owns the book
     if (book.seller.toString() !== req.user.id) {
       return res.status(401).json({ message: "Not authorized" });
     }
-
     const updatedBook = await Book.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -86,12 +78,9 @@ router.delete("/:id", auth, async (req, res) => {
     if (!book) {
       return res.status(404).json({ message: "Book not found" });
     }
-
-    // Check if user owns the book
     if (book.seller.toString() !== req.user.id) {
       return res.status(401).json({ message: "Not authorized" });
     }
-
     await Book.findByIdAndDelete(req.params.id);
     res.json({ message: "Book deleted successfully" });
   } catch (error) {
@@ -106,7 +95,6 @@ router.get("/search/:query", async (req, res) => {
     const books = await Book.find({ isSold: false })
       .populate("seller", "name email location college");
 
-    // Levenshtein Distance Algorithm
     function levenshtein(a, b) {
       const matrix = [];
       for (let i = 0; i <= b.length; i++) {
@@ -131,7 +119,6 @@ router.get("/search/:query", async (req, res) => {
       return matrix[b.length][a.length];
     }
 
-    // Filter books by similarity
     const results = books.filter((book) => {
       const titleDistance = levenshtein(query, book.title.toLowerCase());
       const authorDistance = levenshtein(query, book.author.toLowerCase());

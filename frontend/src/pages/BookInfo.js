@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   Container, Box, Typography, Button,
-  Paper, Grid, Chip, Divider, Avatar, Card
+  Paper, Grid, Chip, Divider, Avatar, Card, Alert
 } from '@mui/material';
 import ChatIcon from '@mui/icons-material/Chat';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -12,6 +12,7 @@ import MenuBookIcon from '@mui/icons-material/MenuBook';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import SchoolIcon from '@mui/icons-material/School';
 import PersonIcon from '@mui/icons-material/Person';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 
 function BookInfo() {
   const { id } = useParams();
@@ -19,6 +20,8 @@ function BookInfo() {
   const [book, setBook] = useState(null);
   const [recommended, setRecommended] = useState([]);
   const [wishlist, setWishlist] = useState([]);
+  const [cartMsg, setCartMsg] = useState('');
+  const [cartError, setCartError] = useState('');
   const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
@@ -65,6 +68,24 @@ function BookInfo() {
     setWishlist(updated);
   };
 
+  const handleAddToCart = async () => {
+    if (!user) { navigate('/login'); return; }
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        'http://localhost:5000/api/cart/add',
+        { bookId: book._id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setCartMsg('Book added to cart successfully! 🛒');
+      setCartError('');
+      setTimeout(() => setCartMsg(''), 3000);
+    } catch (err) {
+      setCartError(err.response?.data?.message || 'Failed to add to cart');
+      setTimeout(() => setCartError(''), 3000);
+    }
+  };
+
   const conditionColor = {
     New: 'success', Good: 'primary',
     Average: 'warning', Poor: 'error',
@@ -101,6 +122,9 @@ function BookInfo() {
         >
           Back to Home
         </Button>
+
+        {cartMsg && <Alert severity="success" sx={{ mb: 2 }}>{cartMsg}</Alert>}
+        {cartError && <Alert severity="error" sx={{ mb: 2 }}>{cartError}</Alert>}
 
         <Paper elevation={0} sx={{ borderRadius: 4, overflow: 'hidden', mb: 4 }}>
           <Grid container>
@@ -214,6 +238,14 @@ function BookInfo() {
                         sx={{ borderRadius: 2, px: 3 }}
                       >
                         💳 Buy Now
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<ShoppingCartIcon />}
+                        onClick={handleAddToCart}
+                        sx={{ borderRadius: 2 }}
+                      >
+                        Add to Cart
                       </Button>
                     </>
                   )}

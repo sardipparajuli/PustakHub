@@ -4,10 +4,11 @@ import io from 'socket.io-client';
 import axios from 'axios';
 import {
   Container, Box, Typography, TextField,
-  Button, Paper, Avatar, Divider
+  Button, Paper, Avatar, Divider, IconButton, Tooltip
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
+import DeleteIcon from '@mui/icons-material/Delete';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 
 const socket = io('http://localhost:5000');
@@ -28,10 +29,22 @@ function Chat() {
     fetchPreviousMessages();
     markAsRead();
     socket.emit('join_room', room);
+
     socket.on('receive_message', (data) => {
-      setMessages((prev) => [...prev, data]);
+      // Only add message if it's from the OTHER person
+      if (data.sender !== user.id) {
+        setMessages((prev) => [...prev, data]);
+      }
     });
-    return () => { socket.off('receive_message'); };
+
+    socket.on('message_deleted', (deletedId) => {
+      setMessages((prev) => prev.filter((m) => m._id !== deletedId));
+    });
+
+    return () => {
+      socket.off('receive_message');
+      socket.off('message_deleted');
+    };
   }, []);
 
   useEffect(() => {
@@ -46,7 +59,8 @@ function Chat() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setMessages(res.data.map((msg) => ({
-        _id: msg._id, room,
+        _id: msg._id,
+        room,
         message: msg.content,
         sender: msg.from,
         senderName: msg.fromName,
@@ -76,23 +90,53 @@ function Chat() {
 
   const sendMessage = async () => {
     if (!message.trim()) return;
-    const data = {
-      room, message,
+
+    const newMessage = {
+      room,
+      message,
       sender: user.id,
       senderName: user.name,
       time: new Date().toLocaleTimeString(),
     };
-    socket.emit('send_message', data);
-    setMessages((prev) => [...prev, data]);
+
+    // Add message to UI immediately
+    setMessages((prev) => [...prev, newMessage]);
+
+    // Emit to socket for other user
+    socket.emit('send_message', newMessage);
+
+    // Save to database
     try {
       const token = localStorage.getItem('token');
-      await axios.post(
+      const res = await axios.post(
         'http://localhost:5000/api/messages/save',
         { to: userId, content: message, fromName: user.name },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      // Update with database _id
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          ...updated[updated.length - 1],
+          _id: res.data._id
+        };
+        return updated;
+      });
     } catch (err) { console.log(err); }
+
     setMessage('');
+  };
+
+  const handleDelete = async (msgId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(
+        `http://localhost:5000/api/messages/delete/${msgId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setMessages((prev) => prev.filter((m) => m._id !== msgId));
+      socket.emit('delete_message', { room, messageId: msgId });
+    } catch (err) { console.log(err); }
   };
 
   return (
@@ -102,12 +146,12 @@ function Chat() {
         background: 'linear-gradient(135deg, #1976d2, #0d47a1)',
         color: 'white', py: 2, px: 3,
         display: 'flex', alignItems: 'center', gap: 2,
-      }}>
+        cursor: 'pointer',
+      }}
+        onClick={() => navigate('/')}
+      >
         <MenuBookIcon />
-        <Typography
-          variant="h6" fontWeight="700" sx={{ cursor: 'pointer' }}
-          onClick={() => navigate('/')}
-        >
+        <Typography variant="h6" fontWeight="700">
           PustakHub
         </Typography>
       </Box>
@@ -157,9 +201,6 @@ function Chat() {
                 <Typography color="text.secondary" variant="h6">
                   👋 Start the conversation!
                 </Typography>
-                <Typography color="text.secondary" variant="body2">
-                  Say hello to {receiver?.name || 'the seller'}
-                </Typography>
               </Box>
             ) : (
               messages.map((msg, index) => (
@@ -179,21 +220,37 @@ function Chat() {
                       {msg.senderName?.[0]}
                     </Avatar>
                   )}
-                  <Box
-                    sx={{
-                      maxWidth: '65%',
+                  <Box sx={{ maxWidth: '65%' }}>
+                    <Box sx={{
                       bgcolor: msg.sender === user.id ? '#1976d2' : 'white',
                       color: msg.sender === user.id ? 'white' : 'black',
-                      p: 1.5, borderRadius: msg.sender === user.id
+                      p: 1.5,
+                      borderRadius: msg.sender === user.id
                         ? '16px 16px 4px 16px'
                         : '16px 16px 16px 4px',
                       boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                    }}
-                  >
-                    <Typography variant="body1">{msg.message}</Typography>
-                    <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mt: 0.3 }}>
-                      {msg.time}
-                    </Typography>
+                    }}>
+                      <Typography variant="body1">{msg.message}</Typography>
+                      <Box sx={{
+                        display: 'flex', justifyContent: 'space-between',
+                        alignItems: 'center', mt: 0.3,
+                      }}>
+                        <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                          {msg.time}
+                        </Typography>
+                        {msg.sender === user.id && msg._id && (
+                          <Tooltip title="Delete message">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDelete(msg._id)}
+                              sx={{ color: 'rgba(255,255,255,0.7)', p: 0.3, ml: 1 }}
+                            >
+                              <DeleteIcon fontSize="inherit" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
+                    </Box>
                   </Box>
                 </Box>
               ))

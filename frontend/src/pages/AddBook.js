@@ -7,19 +7,17 @@ import {
 } from '@mui/material';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 
+const GENRES = [
+  'Fantasy', 'Thriller', 'Biography', 'Science Fiction',
+  'Romance', 'Mystery', 'Horror', 'History',
+  'Self Help', 'Academic', 'Comics', 'Other'
+];
+
 function AddBook() {
   const [formData, setFormData] = useState({
-    title: '',
-    author: '',
-    subject: '',
-    edition: '',
-    branch: '',
-    condition: '',
-    mrp: '',
-    price: '',
-    description: '',
-    image: '',
-    ageYears: '',
+    title: '', author: '', edition: '',
+    branch: '', condition: '', genre: '', mrp: '',
+    price: '', description: '', image: '', ageYears: '',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -66,13 +64,9 @@ function AddBook() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
+      if (!token) { navigate('/login'); return; }
 
       let imageUrl = formData.image;
-
       if (imageFile) {
         setUploading(true);
         const imageData = new FormData();
@@ -120,11 +114,6 @@ function AddBook() {
               margin="normal" required
             />
             <TextField
-              fullWidth label="Subject" name="subject"
-              value={formData.subject} onChange={handleChange}
-              margin="normal" required
-            />
-            <TextField
               fullWidth label="Edition" name="edition"
               value={formData.edition} onChange={handleChange}
               margin="normal"
@@ -134,6 +123,15 @@ function AddBook() {
               value={formData.branch} onChange={handleChange}
               margin="normal"
             />
+            <TextField
+              fullWidth select label="Genre" name="genre"
+              value={formData.genre} onChange={handleChange}
+              margin="normal" required
+            >
+              {GENRES.map((g) => (
+                <MenuItem key={g} value={g}>{g}</MenuItem>
+              ))}
+            </TextField>
             <TextField
               fullWidth select label="Condition" name="condition"
               value={formData.condition} onChange={handleChange}
@@ -153,19 +151,14 @@ function AddBook() {
               type="number" value={formData.ageYears} onChange={handleChange}
               margin="normal"
             />
-
-            {/* Price Suggestion Button */}
             <Button
-              fullWidth
-              variant="outlined"
+              fullWidth variant="outlined"
               startIcon={<AutoFixHighIcon />}
               onClick={handleSuggestPrice}
               sx={{ mt: 1, mb: 1, borderRadius: 2 }}
             >
               🤖 Suggest Price Using AI
             </Button>
-
-            {/* Price Suggestion Result */}
             {priceSuggestion && (
               <Box sx={{ mb: 2, p: 2, bgcolor: '#e8f5e9', borderRadius: 2 }}>
                 <Typography variant="subtitle1" fontWeight="bold" color="success.main">
@@ -178,7 +171,6 @@ function AddBook() {
                 </Box>
               </Box>
             )}
-
             <TextField
               fullWidth label="Selling Price" name="price"
               type="number" value={formData.price} onChange={handleChange}
@@ -189,29 +181,24 @@ function AddBook() {
               value={formData.description} onChange={handleChange}
               margin="normal" multiline rows={3}
             />
-
-            {/* Image Upload */}
             <Box sx={{ mt: 2, mb: 1 }}>
               <Typography variant="subtitle1" fontWeight="bold">
                 Book Cover Image
               </Typography>
               <input
-                type="file"
-                accept="image/*"
+                type="file" accept="image/*"
                 onChange={handleImageChange}
                 style={{ marginTop: '8px' }}
               />
               {imagePreview && (
                 <Box sx={{ mt: 2 }}>
                   <img
-                    src={imagePreview}
-                    alt="Preview"
+                    src={imagePreview} alt="Preview"
                     style={{ width: '150px', height: '180px', objectFit: 'cover', borderRadius: '8px' }}
                   />
                 </Box>
               )}
             </Box>
-
             <Button
               fullWidth type="submit" variant="contained"
               size="large" sx={{ mt: 3, borderRadius: 2 }}

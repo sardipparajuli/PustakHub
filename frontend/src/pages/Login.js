@@ -22,7 +22,13 @@ function Login() {
       });
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
-      navigate('/');
+
+      // Redirect admin to dashboard
+      if (res.data.user.isAdmin) {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
     }
@@ -38,23 +44,16 @@ function Login() {
     }}>
       <Container maxWidth="sm">
         <Paper elevation={10} sx={{ borderRadius: 4, overflow: 'hidden' }}>
-          {/* Top Banner */}
           <Box sx={{
             bgcolor: '#1976d2',
-            p: 4,
-            textAlign: 'center',
-            color: 'white',
+            p: 4, textAlign: 'center', color: 'white',
           }}>
             <MenuBookIcon sx={{ fontSize: 50, mb: 1 }} />
-            <Typography variant="h4" fontWeight="700">
-              PustakHub
-            </Typography>
+            <Typography variant="h4" fontWeight="700">PustakHub</Typography>
             <Typography variant="body2" sx={{ opacity: 0.85, mt: 0.5 }}>
               Nepal's Book Marketplace
             </Typography>
           </Box>
-
-          {/* Form */}
           <Box sx={{ p: 4 }}>
             <Typography variant="h5" fontWeight="600" mb={1}>
               Welcome Back! 👋
@@ -62,9 +61,7 @@ function Login() {
             <Typography variant="body2" color="text.secondary" mb={3}>
               Login to your account to continue
             </Typography>
-
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
             <form onSubmit={handleLogin}>
               <TextField
                 fullWidth label="Email Address" type="email"
@@ -85,13 +82,11 @@ function Login() {
                   mt: 3, borderRadius: 2, py: 1.5,
                   background: 'linear-gradient(135deg, #1976d2, #0d47a1)',
                   fontSize: '16px', fontWeight: '600',
-                  '&:hover': { background: 'linear-gradient(135deg, #1565c0, #0a3880)' }
                 }}
               >
                 Login
               </Button>
             </form>
-
             <Typography align="center" mt={3} variant="body2">
               Don't have an account?{' '}
               <Link to="/register" style={{ color: '#1976d2', fontWeight: '600' }}>

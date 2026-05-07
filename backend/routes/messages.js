@@ -84,7 +84,7 @@ router.put('/read/:otherId', auth, async (req, res) => {
   }
 });
 
-// Save a message to database
+// Save a message
 router.post('/save', auth, async (req, res) => {
   try {
     const { to, content, fromName } = req.body;
@@ -97,6 +97,23 @@ router.post('/save', auth, async (req, res) => {
     });
     await message.save();
     res.json(message);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Delete a message
+router.delete('/delete/:messageId', auth, async (req, res) => {
+  try {
+    const message = await Message.findById(req.params.messageId);
+    if (!message) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+    if (message.from.toString() !== req.user.id) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+    await Message.findByIdAndDelete(req.params.messageId);
+    res.json({ success: true, message: 'Message deleted!' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

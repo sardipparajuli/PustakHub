@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
-  Container, Grid, Card, CardContent, CardMedia,
+  Container, Card, CardContent,
   Typography, Button, Box, TextField, AppBar,
   Toolbar, IconButton, Badge, Chip, Tooltip
 } from '@mui/material';
@@ -12,12 +12,22 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import SearchIcon from '@mui/icons-material/Search';
 import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+
+const GENRES = [
+  'All', 'Fantasy', 'Thriller', 'Biography', 'Science Fiction',
+  'Romance', 'Mystery', 'Horror', 'History',
+  'Self Help', 'Academic', 'Comics', 'Other'
+];
 
 function Home() {
   const [books, setBooks] = useState([]);
+  const [filteredBooks, setFilteredBooks] = useState([]);
   const [search, setSearch] = useState('');
   const [wishlist, setWishlist] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [cartCount, setCartCount] = useState(0);
+  const [selectedGenre, setSelectedGenre] = useState('All');
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
 
@@ -25,17 +35,25 @@ function Home() {
     fetchBooks();
     const savedWishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
     setWishlist(savedWishlist);
-    if (user) fetchUnreadCount();
+    if (user) {
+      fetchUnreadCount();
+      fetchCartCount();
+    }
     const interval = setInterval(() => {
       if (user) fetchUnreadCount();
     }, 10000);
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    filterByGenre(selectedGenre);
+  }, [selectedGenre, books]);
+
   const fetchBooks = async () => {
     try {
       const res = await axios.get('http://localhost:5000/api/books');
       setBooks(res.data);
+      setFilteredBooks(res.data);
     } catch (err) {
       console.log(err);
     }
@@ -53,11 +71,33 @@ function Home() {
     }
   };
 
+  const fetchCartCount = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('http://localhost:5000/api/cart', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCartCount(res.data.books?.length || 0);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const filterByGenre = (genre) => {
+    if (genre === 'All') {
+      setFilteredBooks(books);
+    } else {
+      setFilteredBooks(books.filter((b) => b.genre === genre));
+    }
+  };
+
   const handleSearch = async () => {
     if (!search) { fetchBooks(); return; }
     try {
       const res = await axios.get(`http://localhost:5000/api/books/search/${search}`);
       setBooks(res.data);
+      setFilteredBooks(res.data);
+      setSelectedGenre('All');
     } catch (err) {
       console.log(err);
     }
@@ -79,6 +119,13 @@ function Home() {
     navigate('/login');
   };
 
+  const handleLogoClick = () => {
+    setSelectedGenre('All');
+    setSearch('');
+    fetchBooks();
+    navigate('/');
+  };
+
   const conditionColor = {
     New: 'success',
     Good: 'primary',
@@ -98,7 +145,7 @@ function Home() {
           <Typography
             variant="h6" fontWeight="700"
             sx={{ flexGrow: 1, cursor: 'pointer', letterSpacing: 1 }}
-            onClick={() => navigate('/')}
+            onClick={handleLogoClick}
           >
             PustakHub
           </Typography>
@@ -117,6 +164,13 @@ function Home() {
                 <IconButton color="inherit" onClick={() => navigate('/inbox')}>
                   <Badge badgeContent={unreadCount} color="error">
                     <ChatBubbleIcon />
+                  </Badge>
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="My Cart">
+                <IconButton color="inherit" onClick={() => navigate('/cart')}>
+                  <Badge badgeContent={cartCount} color="error">
+                    <ShoppingCartIcon />
                   </Badge>
                 </IconButton>
               </Tooltip>
@@ -169,7 +223,6 @@ function Home() {
           Buy and sell used books in Nepal
         </Typography>
 
-        {/* Search Bar */}
         <Container maxWidth="md">
           <Box sx={{
             display: 'flex', gap: 1,
@@ -202,64 +255,135 @@ function Home() {
 
       {/* Books Section */}
       <Container sx={{ py: 4 }}>
+
+        {/* Genre Filter */}
+        <Box sx={{ mb: 3, overflowX: 'auto' }}>
+          <Box sx={{ display: 'flex', gap: 1, pb: 1, flexWrap: 'wrap' }}>
+            {GENRES.map((genre) => (
+              <Chip
+                key={genre}
+                label={genre}
+                onClick={() => setSelectedGenre(genre)}
+                sx={{
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  bgcolor: selectedGenre === genre ? '#1976d2' : 'white',
+                  color: selectedGenre === genre ? 'white' : '#1976d2',
+                  border: '1px solid #1976d2',
+                  '&:hover': {
+                    bgcolor: selectedGenre === genre ? '#1565c0' : '#e3f2fd',
+                  },
+                }}
+              />
+            ))}
+          </Box>
+        </Box>
+
         <Typography variant="h5" fontWeight="700" mb={3} color="#1976d2">
-          📖 Available Books
+          📖 {selectedGenre === 'All' ? 'Available Books' : `${selectedGenre} Books`}
+          <Typography component="span" variant="body1" color="text.secondary" ml={1}>
+            ({filteredBooks.length} books)
+          </Typography>
         </Typography>
 
-        <Grid container spacing={3}>
-          {books.length === 0 ? (
-            <Box sx={{ mt: 5, width: '100%', textAlign: 'center' }}>
-              <Typography variant="h6" color="text.secondary">
-                No books found! Be the first to add one 📚
-              </Typography>
-              {user && (
-                <Button
-                  variant="contained" sx={{ mt: 2, borderRadius: 2 }}
-                  onClick={() => navigate('/add-book')}
-                >
-                  Add a Book
-                </Button>
-              )}
-            </Box>
-          ) : (
-            books.map((book) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={book._id}>
-                <Card sx={{
-                  height: '100%', borderRadius: 3,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 8px 24px rgba(25,118,210,0.2)',
-                  }
-                }}>
-                  <Box sx={{ position: 'relative' }}>
-                    <CardMedia
-                      component="img"
-                      height="200"
-                      image={book.image || 'https://via.placeholder.com/200x200?text=No+Image'}
+        {filteredBooks.length === 0 ? (
+          <Box sx={{ mt: 5, textAlign: 'center' }}>
+            <Typography variant="h6" color="text.secondary">
+              No books found in this genre! 📚
+            </Typography>
+            <Button
+              variant="contained" sx={{ mt: 2, borderRadius: 2 }}
+              onClick={() => setSelectedGenre('All')}
+            >
+              View All Books
+            </Button>
+          </Box>
+        ) : (
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '24px',
+          }}>
+            {filteredBooks.map((book) => (
+              <Card key={book._id} sx={{
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                borderRadius: 3,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 8px 24px rgba(25,118,210,0.2)',
+                }
+              }}>
+                <Box sx={{ position: 'relative' }}>
+                  <Box
+                    onClick={() => navigate(`/book/${book._id}`)}
+                    sx={{
+                      width: '100%',
+                      height: '240px',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      bgcolor: '#f0f0f0',
+                    }}
+                  >
+                    <img
+                      src={book.image || 'https://via.placeholder.com/300x240?text=No+Image'}
                       alt={book.title}
-                      sx={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`/book/${book._id}`)}
-                    />
-                    <Chip
-                      label={book.condition}
-                      color={conditionColor[book.condition] || 'default'}
-                      size="small"
-                      sx={{
-                        position: 'absolute', top: 8, right: 8,
-                        fontWeight: '600',
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block',
                       }}
                     />
                   </Box>
-                  <CardContent>
+                  <Chip
+                    label={book.condition}
+                    color={conditionColor[book.condition] || 'default'}
+                    size="small"
+                    sx={{
+                      position: 'absolute', top: 8, right: 8,
+                      fontWeight: '600',
+                    }}
+                  />
+                  {book.genre && (
+                    <Chip
+                      label={book.genre}
+                      size="small"
+                      sx={{
+                        position: 'absolute', top: 8, left: 8,
+                        fontWeight: '600',
+                        bgcolor: 'rgba(255,255,255,0.9)',
+                        color: '#1976d2',
+                      }}
+                    />
+                  )}
+                </Box>
+
+                <CardContent sx={{
+                  flexGrow: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  p: 2,
+                }}>
+                  <Box>
                     <Typography variant="h6" fontWeight="700" noWrap>
                       {book.title}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" mb={1}>
+                    <Typography variant="body2" color="text.secondary" mb={1} noWrap>
                       ✍️ {book.author}
                     </Typography>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  </Box>
+                  <Box>
+                    <Box sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      mb: 1.5,
+                    }}>
                       <Typography variant="h6" color="#1976d2" fontWeight="700">
                         Rs. {book.price}
                       </Typography>
@@ -297,12 +421,12 @@ function Home() {
                         </IconButton>
                       </Tooltip>
                     </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))
-          )}
-        </Grid>
+                  </Box>
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
+        )}
       </Container>
     </Box>
   );

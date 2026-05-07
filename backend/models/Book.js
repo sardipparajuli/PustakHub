@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const BookSchema = new mongoose.Schema({
   title: {
@@ -11,19 +11,37 @@ const BookSchema = new mongoose.Schema({
   },
   subject: {
     type: String,
-    required: true,
+    default: '',
   },
   edition: {
     type: String,
-    default: "",
+    default: '',
   },
   branch: {
     type: String,
-    default: "",
+    default: '',
+  },
+  genre: {
+    type: String,
+    default: 'Other',
+    enum: [
+      'Fantasy',
+      'Thriller',
+      'Biography',
+      'Science Fiction',
+      'Romance',
+      'Mystery',
+      'Horror',
+      'History',
+      'Self Help',
+      'Academic',
+      'Comics',
+      'Other',
+    ],
   },
   condition: {
     type: String,
-    enum: ["New", "Good", "Average", "Poor"],
+    enum: ['New', 'Good', 'Average', 'Poor'],
     required: true,
   },
   mrp: {
@@ -36,15 +54,15 @@ const BookSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    default: "",
+    default: '',
   },
   image: {
     type: String,
-    default: "",
+    default: '',
   },
   seller: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: 'User',
     required: true,
   },
   isSold: {
@@ -53,4 +71,4 @@ const BookSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-module.exports = mongoose.model("Book", BookSchema);
+module.exports = mongoose.model('Book', BookSchema);

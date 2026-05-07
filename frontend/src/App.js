@@ -12,6 +12,8 @@ import EditBook from './pages/EditBook';
 import Payment from './pages/Payment';
 import PaymentSuccess from './pages/PaymentSuccess';
 import Inbox from './pages/Inbox';
+import Cart from './pages/Cart';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
@@ -30,6 +32,8 @@ function App() {
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/payment/failure" element={<PaymentSuccess />} />
         <Route path="/inbox" element={<Inbox />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
     </Router>
   );
