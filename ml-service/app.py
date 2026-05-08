@@ -7,9 +7,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 app = Flask(__name__)
 CORS(app)
 
-# =====================
-# 1. COLLABORATIVE FILTERING (Genre Based)
-# =====================
 @app.route('/recommend', methods=['POST'])
 def recommend():
     data = request.json
@@ -21,7 +18,6 @@ def recommend():
 
     df = pd.DataFrame(books)
 
-    # Find current book
     current_books = df[df['_id'] == current_book_id]
     if current_books.empty:
         return jsonify([])
@@ -29,14 +25,12 @@ def recommend():
     current_book = current_books.iloc[0]
     current_genre = current_book.get('genre', 'Other')
 
-    # First filter by same genre
     same_genre_books = df[
         (df['genre'] == current_genre) &
         (df['_id'] != current_book_id)
     ]
 
-    if len(same_genre_books) >= 4:
-        # Use cosine similarity within same genre
+    if len(same_genre_books) >= 1:
         condition_map = {'New': 4, 'Good': 3, 'Average': 2, 'Poor': 1}
         same_genre_books = same_genre_books.copy()
         same_genre_books['condition_score'] = same_genre_books['condition'].map(condition_map).fillna(2)
@@ -45,7 +39,6 @@ def recommend():
 
         features = same_genre_books[['price', 'mrp', 'condition_score']].values
 
-        # Current book features
         current_condition = condition_map.get(current_book.get('condition', 'Good'), 2)
         current_features = np.array([[
             float(current_book.get('price', 0)),
@@ -58,14 +51,33 @@ def recommend():
         same_genre_books['similarity'] = similarities
         same_genre_books = same_genre_books.sort_values('similarity', ascending=False)
 
-        recommended = same_genre_books.head(4).to_dict('records')
+        # Return up to 15 same genre books
+        recommended = same_genre_books.head(15).to_dict('records')
+
+        # If less than 15, fill remaining with other genre books
+        if len(recommended) < 15:
+            remaining = 15 - len(recommended)
+            other_books = df[
+                (df['genre'] != current_genre) &
+                (df['_id'] != current_book_id)
+            ].copy()
+
+            if len(other_books) > 0:
+                other_books['condition_score'] = other_books['condition'].map(condition_map).fillna(2)
+                other_books['price'] = pd.to_numeric(other_books['price'], errors='coerce').fillna(0)
+                other_books['mrp'] = pd.to_numeric(other_books['mrp'], errors='coerce').fillna(0)
+                other_features = other_books[['price', 'mrp', 'condition_score']].values
+                other_similarities = cosine_similarity(current_features, other_features)[0]
+                other_books['similarity'] = other_similarities
+                other_books = other_books.sort_values('similarity', ascending=False)
+                extra = other_books.head(remaining).to_dict('records')
+                recommended = recommended + extra
+
         return jsonify(recommended)
 
     else:
-        # Not enough same genre books, fill with other similar books
-        other_books = df[df['_id'] != current_book_id]
+        other_books = df[df['_id'] != current_book_id].copy()
         condition_map = {'New': 4, 'Good': 3, 'Average': 2, 'Poor': 1}
-        other_books = other_books.copy()
         other_books['condition_score'] = other_books['condition'].map(condition_map).fillna(2)
         other_books['price'] = pd.to_numeric(other_books['price'], errors='coerce').fillna(0)
         other_books['mrp'] = pd.to_numeric(other_books['mrp'], errors='coerce').fillna(0)
@@ -80,17 +92,13 @@ def recommend():
         ]])
 
         similarities = cosine_similarity(current_features, features)[0]
-        other_books = other_books.copy()
         other_books['similarity'] = similarities
         other_books = other_books.sort_values('similarity', ascending=False)
 
-        recommended = other_books.head(4).to_dict('records')
+        recommended = other_books.head(15).to_dict('records')
         return jsonify(recommended)
 
 
-# =====================
-# 2. PRICE SUGGESTION
-# =====================
 @app.route('/suggest-price', methods=['POST'])
 def suggest_price():
     data = request.json

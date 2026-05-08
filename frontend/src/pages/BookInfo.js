@@ -104,12 +104,12 @@ function BookInfo() {
         background: 'linear-gradient(135deg, #1976d2, #0d47a1)',
         color: 'white', py: 2, px: 3,
         display: 'flex', alignItems: 'center', gap: 2,
-      }}>
+        cursor: 'pointer',
+      }}
+        onClick={() => navigate('/')}
+      >
         <MenuBookIcon />
-        <Typography
-          variant="h6" fontWeight="700" sx={{ cursor: 'pointer' }}
-          onClick={() => navigate('/')}
-        >
+        <Typography variant="h6" fontWeight="700">
           PustakHub
         </Typography>
       </Box>
@@ -155,7 +155,7 @@ function BookInfo() {
                     color={conditionColor[book.condition] || 'default'}
                     sx={{ fontWeight: '600' }}
                   />
-                  {book.subject && <Chip label={book.subject} variant="outlined" />}
+                  {book.genre && <Chip label={book.genre} color="secondary" variant="outlined" />}
                   {book.branch && <Chip label={book.branch} variant="outlined" />}
                   {book.edition && <Chip label={`Edition: ${book.edition}`} variant="outlined" />}
                 </Box>
@@ -269,40 +269,111 @@ function BookInfo() {
           <Box sx={{ mt: 2 }}>
             <Typography variant="h5" fontWeight="700" mb={3} color="#1976d2">
               📚 Similar Books You Might Like
+              <Typography component="span" variant="body1" color="text.secondary" ml={1}>
+                ({recommended.length} books)
+              </Typography>
             </Typography>
-            <Grid container spacing={3}>
-              {recommended.slice(0, 4).map((b) => (
-                <Grid item xs={12} sm={6} md={3} key={b._id}>
-                  <Card
-                    sx={{
-                      borderRadius: 3, cursor: 'pointer',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: '0 8px 24px rgba(25,118,210,0.2)'
-                      }
-                    }}
-                    onClick={() => navigate(`/book/${b._id}`)}
-                  >
+
+            {/* Fixed equal size grid */}
+            <Box sx={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(6, 1fr)',
+              gap: '16px',
+            }}>
+              {recommended.map((b) => (
+                <Card
+                  key={b._id}
+                  onClick={() => navigate(`/book/${b._id}`)}
+                  sx={{
+                    cursor: 'pointer',
+                    borderRadius: 3,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '280px', // Fixed height for all cards
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: '0 8px 24px rgba(25,118,210,0.2)'
+                    }
+                  }}
+                >
+                  {/* Fixed image */}
+                  <Box sx={{
+                    width: '100%',
+                    height: '160px',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                  }}>
                     <img
-                      src={b.image || 'https://via.placeholder.com/150x150?text=No+Image'}
+                      src={b.image || 'https://via.placeholder.com/150x160?text=No+Image'}
                       alt={b.title}
-                      style={{ width: '100%', height: '160px', objectFit: 'cover' }}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block',
+                      }}
                     />
-                    <Box sx={{ p: 2 }}>
-                      <Typography variant="subtitle1" fontWeight="700" noWrap>
+                  </Box>
+
+                  {/* Fixed content */}
+                  <Box sx={{
+                    p: 1.5,
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    overflow: 'hidden',
+                  }}>
+                    <Box>
+                      {/* Title — always 1 line, truncated */}
+                      <Typography
+                        variant="subtitle2"
+                        fontWeight="700"
+                        sx={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          display: 'block',
+                        }}
+                      >
                         {b.title}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">{b.author}</Typography>
-                      <Typography variant="h6" color="#1976d2" fontWeight="700">
+                      {/* Author — always 1 line, truncated */}
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          display: 'block',
+                        }}
+                      >
+                        {b.author}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      {b.genre && (
+                        <Chip
+                          label={b.genre} size="small"
+                          sx={{
+                            fontSize: '9px', height: '18px',
+                            color: '#1976d2', borderColor: '#1976d2',
+                            mb: 0.5,
+                          }}
+                          variant="outlined"
+                        />
+                      )}
+                      <Typography variant="subtitle2" color="#1976d2" fontWeight="700">
                         Rs. {b.price}
                       </Typography>
                     </Box>
-                  </Card>
-                </Grid>
+                  </Box>
+                </Card>
               ))}
-            </Grid>
+            </Box>
           </Box>
         )}
       </Container>
